@@ -9,7 +9,7 @@ A ready-to-use connect/sync widget, as add-on library for
 ## Usage
 
 ```js
-const SolidFile =require('solid-file-client')
+const SolidFile = require('solid-file-client')
 const Widget = require("./build/widget.js")
 
 ```html
@@ -42,8 +42,7 @@ The widget has some configuration options to customize the behavior:
 Example:
 
 ```js
-const widget = new Widget(remoteStorage, { autoCloseAfter: 2000 });
-```
+const widget = new Widget(solidFile)
 
 ## Available Functions
 
@@ -72,3 +71,11 @@ Build, run and watch demo/test app:
     npm start
 
 The demo app will then be served at http://localhost:8008
+
+## Acknowledgements
+
+Many thanks for inspiration from https://github.com/remotestorage/remotestorage-widget
+and from https://github.com/jeff-zucker/solid-file-client
+ 
+
+**copyright (c) 2019 Alain Bourgeois** may be freely used with MIT license
