@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/remotestorage-widget.svg)](https://www.npmjs.com/package/remotestorage-widget)
 [![devDependency Status](http://img.shields.io/david/dev/remotestorage/remotestorage-widget.svg?style=flat)](https://david-dm.org/remotestorage/remotestorage-widget#info=devDependencies)
 
-A ready-to-use connect/sync widget, as add-on library for
+A ready-to-use connect widget, as add-on library for
 [node-solid-server](https://github.com/solid/node-solid-server).
 
 ## Usage
