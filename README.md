@@ -56,7 +56,7 @@ fine-tuning the experience.
 
 `close()` - Close/minimize the widget to only show the icon.
 
-`open()` - Open the widget when it's minimized.
+`open()` - Open the widget when it is minimized.
 
 `toggle()` - Switch between open and closed state.
 
