@@ -1,0 +1,14 @@
+{
+    "name": "rs-widget",
+    "version": "0.3.0",
+    "description": "Solid connect widget using solid-file-client.js",
+    "main": [
+        "./build/widget.js"
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/bourgeoa/solid-file-widget",
+    "keywords": [
+      "localstorage", "indexeddb", "storage", "offline", "no-backend",
+      "unhosted", "offline-first", "solid", "solid-file-client
+    ]
+}

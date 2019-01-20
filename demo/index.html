@@ -1,0 +1,38 @@
+<!doctype html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" charset="utf-8">
+  <title>RS Widget Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: lightgrey
+    }
+  </style>
+</head>
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/solid-file-client@0.4.8/dist/browser/solid-file-client.bundle.js"></script>
+  <script type="text/javascript" src="../build/widget.js"></script>
+  <script>
+ 
+ 	const remoteStorage = SolidFileClient;
+    var widget = new Widget(remoteStorage, {
+      //leaveOpen: true,
+      //autoCloseAfter: 2000,
+      // skipInitial: true,
+      logging: true
+    });
+    widget.attach();
+
+    let style = document.createElement('style')
+    style.innerHTML = `#remotestorage-widget {
+        position: fixed;
+        top: 18px;
+        right: 15px;
+    }`
+    document.head.appendChild(style)
+
+  </script>
+</body>
