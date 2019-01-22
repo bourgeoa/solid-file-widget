@@ -38,6 +38,7 @@ The widget has some configuration options to customize the behavior:
 | `autoCloseAfter` | Timeout after which the widget closes automatically (in milliseconds). The widget only closes when a storage is connected. | Number | 1500 |
 | `skipInitial` | Don't show the initial connect hint, but show sign-in screen directly instead | Boolean | false |
 | `logging` | Enable logging for debugging purposes | Boolean | false |
+| `windowReload` | Browser reload on disconnect | Boolean | true |
 
 Example:
 

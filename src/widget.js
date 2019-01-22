@@ -2,7 +2,7 @@
  * Solid podStorage connect widget
  * inspired from RemoteStorage Widget (https://github.com/remotestorage/remotestorage-widget)
  * 
- * podStorage							   - session cookie contains : https://<podName> default taken from webId
+ * podStorage							   - session cookie contains : https://<podName> (default taken from webId)
  * 
  * @constructor
  *
@@ -16,21 +16,21 @@
  *                                           but show sign-in screen directly instead
  *                                           (default: false)
  * @param {boolean} options.logging        - Enable logging (default: false)
+ * @param 'boolean} options.windowReload   - reload web app on disconnect (default: true)
  */
 let Widget = function(remoteStorage, options={}) {
   this.rs = remoteStorage;
-  this.userAddress ="";
+  this.userAddress ="";  
+  this.click = false; // true if click on button disconnect
 
   this.leaveOpen      = options.leaveOpen ? options.leaveOpen : false;
   this.autoCloseAfter = options.autoCloseAfter ? options.autoCloseAfter : 1500;
   this.skipInitial    = options.skipInitial ? options.skipInitial : false;
   this.logging        = options.logging ? options.logging : false;
+  this.windowReload	  = options.windowReload ? options.windowReload : true
 
   // true if we have remoteStorage connection's info
   this.active = false;
-
-  // remoteStorage is connected!
-  this.online = false;
 
   // widget is minimized ?
   this.closed = false;
@@ -55,18 +55,17 @@ Widget.prototype = {
         this.setBackendClass(); // removes all backend CSS classes
         this.open();
         this.setInitialState();
+      	if ( this.click === true && this.windowReload === true) { window.location.reload(true)}
         break;
       case 'connected':
         this.active = true;
-        this.online = true;
 		this.rs.checkSession().then( session => {
 		  console.log("Logged in as "+session.webId+" "+this.userAddress);
-		  if (this.userAddress == "") {this.userAddress = sessionStorage.getItem('podStorage');} // alert(this.userAddress);}
-          this.rsConnectedUser.innerHTML = this.userAddress;  // connectedUser;
+          this.rsConnectedUser.innerHTML = localStorage.getItem('podStorage'); //this.userAddress;
           this.setBackendClass("remotestorage");  //  this.rs.backend);
           this.rsConnectedLabel.textContent = "webId : "+session.webId.split("/")[2];
           this.setState('connected');
-		  }, err => {alert(err); this.setState('disconnected');
+		  }, err => {alert(err); this.click === false; this.setState('disconnected');
 		});
         break;
       case 'error':
@@ -171,6 +170,7 @@ Widget.prototype = {
    * @private
    */
   setupHandlers () {
+	if (localStorage.getItem('podStorage') === null) this.rs.logout(); 
 	this.rs.checkSession().then( session => {
 		this.eventHandler("connected");
 		}, err => this.eventHandler("disconnected")
@@ -210,20 +210,22 @@ Widget.prototype = {
     this.rsSignInForm.addEventListener('submit', (e) => {
       e.preventDefault();
       this.userAddress = document.querySelector('input[name=rs-user-address]').value;
-	  // test podStorage nd set session cookie
+	  // test podStorage and set localstorage cookie
 	  this.rs.popupLogin()
 	  .then( webId => {
 		  if ( this.userAddress != "")
 			{this.rs.readFolder(this.userAddress+"/public")
 				.then( folder => {
+					localStorage.setItem('podStorage', this.userAddress);
+					this.click = true;
 					this.eventHandler("connected");
-					sessionStorage.setItem('podStorage', this.userAddress)
 				}, err => {
 					this.rs.logout().then( console.log("logout podStotage error "+err)); // , err => console.log(err));
 					this.eventHandler("error","PodStorage error : "+err)})
 			}else {
 				this.userAddress = "https://"+webId.split("/")[2];
-				sessionStorage.setItem('podStorage', this.userAddress);
+				localStorage.setItem('podStorage', this.userAddress);
+				this.click = true;
 				this.eventHandler("connected");
 			}
 			}, err => {alert("popup login : "+err); this.eventHandler("disconnected")}
@@ -233,10 +235,10 @@ Widget.prototype = {
 
   setClickHandlers () {
     // Initial button
-    this.rsInitial.addEventListener('click', () => this.setState('sign-in') );// this.showChooseOrSignIn() );
+    this.rsInitial.addEventListener('click', () => this.setState('sign-in') );
 
     // Disconnect button
-    this.rsDisconnectButton.addEventListener('click', () => this.disconnect() );
+    this.rsDisconnectButton.addEventListener('click', () => { this.disconnect()} );
 
     // Reduce to icon only if connected and clicked outside of widget
     document.addEventListener('click', () => this.close() );
@@ -253,7 +255,7 @@ Widget.prototype = {
    */
   disconnect() {
 	this.userAddress ="";
-	sessionStorage.removeItem('podStorage');
+	localStorage.removeItem('podStorage');
 	this.rs.logout().then( res => console.log("logout"), err => console.log("logout "+err));
     this.setInitialState();
 
