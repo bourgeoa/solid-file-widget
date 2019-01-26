@@ -13,17 +13,24 @@
   </style>
 </head>
 <body>
-  <script src="https://cdn.jsdelivr.net/npm/solid-file-client@0.4.8/dist/browser/solid-file-client.bundle.js"></script>
+<!--  <script src="https://cdn.jsdelivr.net/npm/solid-file-client@0.4.8/dist/browser/solid-file-client.bundle.js"></script> -->
+<!--  <script src="https://cdn.jsdelivr.net/npm/solid-file-client/dist/browser/solid-file-client.bundle.js"></script> -->
+  <script type="text/javascript" src="../node_modules/solid-file-client/dist/browser/solid-file-client.bundle.js"></script>
   <script type="text/javascript" src="../build/widget.js"></script>
   <script>
- 
- 	const solidFile = SolidFileClient;
-    var widget = new Widget(solidFile, {
-      // leaveOpen: true,
-      // autoCloseAfter: 2000,
+
+ 	const fileClient = SolidFileClient;
+	let folder = "/public/foldername"
+
+    var widget = new Widget(fileClient, {
+      //leaveOpen: true,
+      //autoCloseAfter: 2000,
       // skipInitial: true,
+      //windowReload: false,
+      appFolder: folder,
+      //appFile : "/public/filename.ttl"
+      solidAppName : "appName",
       logging: true
-      // windowReload : false
     });
     widget.attach();
 

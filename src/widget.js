@@ -1,9 +1,11 @@
 /**
- * Solid podStorage connect widget
+ * Solid podStorage connect widget (https://github.com/bourgeoa/solid-file-widget)
  * inspired from RemoteStorage Widget (https://github.com/remotestorage/remotestorage-widget)
- * 
- * podStorage							   - session cookie contains : https://<podName> (default taken from webId)
- * 
+ *
+ * @Return cookies in localStorage as URI
+ * - appRootUri							  - https://<podName>/<appFolder> (default <podName> taken from webId)
+ * - appFileUri							  - https://<podName>/<appFile>
+ *										    
  * @constructor
  *
  * @param {object}  remoteStorage          - Solid podStorage instance
@@ -16,7 +18,10 @@
  *                                           but show sign-in screen directly instead
  *                                           (default: false)
  * @param {boolean} options.logging        - Enable logging (default: false)
- * @param 'boolean} options.windowReload   - reload web app on disconnect (default: true)
+ * @param 'boolean} options.windowReload   - Reload web app on disconnect (default: true)
+ * @param {string}  options.appFolder	   - Root folder of the app (default: '/public')
+ * @param {string}  options.appFile		   - appFile of the app (default: "")
+ * @param {string}  options.solidAppName   - solidAppName shall find 'appFolder' through podStorage.card (default: "")
  */
 let Widget = function(remoteStorage, options={}) {
   this.rs = remoteStorage;
@@ -27,8 +32,11 @@ let Widget = function(remoteStorage, options={}) {
   this.autoCloseAfter = options.autoCloseAfter ? options.autoCloseAfter : 1500;
   this.skipInitial    = options.skipInitial ? options.skipInitial : false;
   this.logging        = options.logging ? options.logging : false;
-  this.windowReload	  = options.windowReload ? options.windowReload : true
-
+  this.windowReload	  = options.windowReload ? options.windowReload : true;
+  this.appFile		  = options.appFile ? options.appFile : "";
+  this.appFolder	  = options.appFolder ? options.appFolder : "/public";
+  this.solidAppName   = options.solidAppName ? options.solidAppName : "";
+  
   // true if we have remoteStorage connection's info
   this.active = false;
 
@@ -55,32 +63,23 @@ Widget.prototype = {
         this.setBackendClass(); // removes all backend CSS classes
         this.open();
         this.setInitialState();
-      	if ( this.click === true && this.windowReload === true) { window.location.reload(true)}
         break;
       case 'connected':
         this.active = true;
 		this.rs.checkSession().then( session => {
 		  console.log("Logged in as "+session.webId+" "+this.userAddress);
-          this.rsConnectedUser.innerHTML = localStorage.getItem('podStorage'); //this.userAddress;
-          this.setBackendClass("remotestorage");  //  this.rs.backend);
+          this.rsConnectedUser.innerHTML = localStorage.getItem('appRootUri');
+          this.setBackendClass("remotestorage");
           this.rsConnectedLabel.textContent = "webId : "+session.webId.split("/")[2];
           this.setState('connected');
 		  }, err => {alert(err); this.click === false; this.setState('disconnected');
 		});
+      	if ( this.click === true && this.windowReload === true) {/*alert("connect windowReload");*/ window.location.reload(true)}
         break;
       case 'error':
-        this.setBackendClass("remotestorage");  //  this.rs.backend);
-
-        if (msg.slice(0,16) === "PodStorage error") {
-          this.handleDiscoveryError(msg);
-        } else if (msg.name === 'SyncError') {
-          this.handleSyncError(msg);
-        } else if (msg.name === 'Unauthorized') {
-          this.handleUnauthorized(msg);
-        } else {
-          console.debug('Encountered unhandled error', msg);
-        }
-
+        this.setBackendClass("remotestorage");
+    	this.rs.logout().then( res => console.log("logout"), err => console.log("logout "+err));
+        this.handleDiscoveryError(msg);
         break;
     }
   },
@@ -170,9 +169,14 @@ Widget.prototype = {
    * @private
    */
   setupHandlers () {
-	if (localStorage.getItem('podStorage') === null) this.rs.logout(); 
 	this.rs.checkSession().then( session => {
+		if (localStorage.getItem('appRootUri') === null) {
+			this.click = false;
+			this.eventHandler("disconnected");
+			this.rs.logout().then( res => console.log("logout"), err => console.log("logout "+err));
+		}else{
 		this.eventHandler("connected");
+		}
 		}, err => this.eventHandler("disconnected")
 	);
     this.setEventListeners();
@@ -213,26 +217,59 @@ Widget.prototype = {
 	  // test podStorage and set localstorage cookie
 	  this.rs.popupLogin()
 	  .then( webId => {
-		  if ( this.userAddress != "")
-			{this.rs.readFolder(this.userAddress+"/public")
-				.then( folder => {
-					localStorage.setItem('podStorage', this.userAddress);
-					this.click = true;
-					this.eventHandler("connected");
-				}, err => {
-					this.rs.logout().then( console.log("logout podStotage error "+err)); // , err => console.log(err));
-					this.eventHandler("error","PodStorage error : "+err)})
+			if ( this.userAddress != "") {
+	  			this.userAddress = this.userAddress.split("/",3).join('/');
 			}else {
-				this.userAddress = "https://"+webId.split("/")[2];
-				localStorage.setItem('podStorage', this.userAddress);
-				this.click = true;
-				this.eventHandler("connected");
+				this.userAddress = webId.split("/",3).join('/');
 			}
-			}, err => {alert("popup login : "+err); this.eventHandler("disconnected")}
-    	  )
-    })
+			if (this.appFolder.charAt(0) !== '/') {this.appFolder = "/"+this.appFolder}
+			this.appRootUri = this.userAddress+this.appFolder;
+			if (this.appFile.charAt(0) !== '/') {this.appFile = "/"+this.appFile}
+			this.appFileUri = this.userAddress+this.appFile;
+  			if ( this.solidAppName !== "" ) {this.findSolidAppFolder(this.solidAppName);}
+			this.checkAppFolder();
+		}, err => {
+			this.eventHandler("error", err+" webid")
+		})
+      })
   },
 
+  checkAppFolder() {
+  	  this.rs.readFolder(this.appRootUri).then( folder => {
+						this.click = true;
+						localStorage.setItem('appRootUri', this.appRootUri);
+						if (this.appFile !== "/") { localStorage.setItem('appFileUri', this.appFileUri);}
+						this.eventHandler("connected")
+  		}, err => {
+			if ( this.userAddress.split("/",2).join('/') !== "https:/") {
+				this.eventHandler("error", "404 (not an URL) "+this.userAddress)
+  			}else if (err.slice(0,3) == "404") {
+  				let response = window.confirm("Error : "+err+"\n\nDo you allow creation of \n  "+this.appFolder+"\n  (need r/w access) ?");
+				if(response)
+				{
+					this.rs.createFolder(this.appRootUri).then( res => {
+						alert(this.appRootUri+"\n\nwas created");
+						this.click = true;
+						localStorage.setItem('appRootUri', this.appRootUri);
+						if (this.appFile !== "/") { localStorage.setItem('appFileUri', this.appFileUri);}
+						this.eventHandler("connected")
+					}, err => { alert("not created "+err);
+						this.eventHandler("error", err)
+					})
+				}else{
+					alert("You choosed not to create "+this.appFolder)
+					this.eventHandler("error", "404 (not found)\n"+this.appFolder+"\n (not created)");
+				}
+  			}else{
+				this.eventHandler("error", err)
+	    	}
+		})
+  },
+
+  findSolidAppFolder(appName) {
+//  	to be developped : find/create entry in type index including appFile/appFolder
+  },
+  
   setClickHandlers () {
     // Initial button
     this.rsInitial.addEventListener('click', () => this.setState('sign-in') );
@@ -251,18 +288,22 @@ Widget.prototype = {
   },
 
   /**
-   * Reset the widget after disconnect.
+   * Reset the widgets after disconnect.
    */
   disconnect() {
+  	this.click = true;
 	this.userAddress ="";
-	localStorage.removeItem('podStorage');
+	localStorage.removeItem('appRootUri');
+	localStorage.removeItem('appFileUri');
 	this.rs.logout().then( res => console.log("logout"), err => console.log("logout "+err));
+//	this.rs.logout().then( console.log("logout disconnect"))
     this.setInitialState();
 
     let msgContainer = document.querySelector('.rs-sign-in-error');
     msgContainer.innerHTML = "";
   	msgContainer.classList.remove('rs-visible');
     msgContainer.classList.add('rs-hidden');
+	if ( this.click === true && this.windowReload === true) {/*alert("disconnect windowReload");*/ window.location.reload(true)}
   },
 
   /**
@@ -352,14 +393,10 @@ Widget.prototype = {
   },
 
   handleUnauthorized (error) {
-    if (error.code && error.code === 'access_denied') {
-      this.rs.logout().then( res => console.log("logout"), err => console.log("logout "+err));
-    } else {
       this.open();
-      this.showErrorBox(error.message + " ");
+      this.showErrorBox(error + " ");
       this.rsErrorBox.appendChild(this.rsErrorReconnectLink);
       this.rsErrorReconnectLink.classList.remove('rs-hidden');
-    }
   },
 
 };

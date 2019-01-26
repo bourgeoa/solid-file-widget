@@ -1,10 +1,19 @@
 # solid-file-widget
 
-[![npm](https://img.shields.io/npm/v/remotestorage-widget.svg)](https://www.npmjs.com/package/remotestorage-widget)
-[![devDependency Status](http://img.shields.io/david/dev/remotestorage/remotestorage-widget.svg?style=flat)](https://david-dm.org/remotestorage/remotestorage-widget#info=devDependencies)
+<a href="http://badge.fury.io/js/solid-file-widget">![npm](https://badge.fury.io/js/solid-file-widget.svg)</a>
 
-A ready-to-use connect widget, as add-on library for
+A ready-to-use connect/register widget for Solid webapp, as add-on library for
 [node-solid-server](https://github.com/solid/node-solid-server).
+
+-- registering to be done, but all parameters are fonctional --
+
+## Returns cookies
+
+If 'connected to the Solid pod' and after 'checking/creating appRootUri for appRoot'
+(do not check/create appFileUri) returns localStorage cookies.
+
+var uriRoot = localStorage.getItem(appRootUri);
+var uriFile = localStorage.getItem(appFileUri);
 
 ## Usage
 
@@ -20,9 +29,14 @@ const solidFile = SolidFileClient;
 
 // ...
 
-let solidStore = sessionStorage.getItem('podStorage')  // solidStore value is : 'null' if disconnected or  'https://<podName>'
+var uriRoot = localStorage.getItem(appRoot);
+var uriFile = localStorage.getItem(appFile);
 
-const widget = new Widget(solidFile, {options});
+const widget = new Widget(solidFile, {
+	solidAppName : "appname",
+	appFolder : "/public/foldername"
+	});
+
 widget.attach();
 
 // ...
@@ -38,7 +52,10 @@ The widget has some configuration options to customize the behavior:
 | `autoCloseAfter` | Timeout after which the widget closes automatically (in milliseconds). The widget only closes when a storage is connected. | Number | 1500 |
 | `skipInitial` | Don't show the initial connect hint, but show sign-in screen directly instead | Boolean | false |
 | `logging` | Enable logging for debugging purposes | Boolean | false |
-| `windowReload` | Browser reload on disconnect | Boolean | true |
+| `windowReload` | Browser reload on connect/disconnect | Boolean | true |
+| `solidAppName` | app name registered in Solid pod TypeIndex | String | "" |
+| `appFolder` | app root folder registered in Solid pod TypeIndex | String | from TypeIndex or '/public' |
+| `appFile` | app file registered in Solid pod TypeIndex | String | from TypeIndex |
 
 Example:
 
