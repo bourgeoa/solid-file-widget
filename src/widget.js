@@ -303,7 +303,7 @@ Widget.prototype = {
     msgContainer.innerHTML = "";
   	msgContainer.classList.remove('rs-visible');
     msgContainer.classList.add('rs-hidden');
-	if ( this.click === true && this.windowReload === true) {/*alert("disconnect windowReload");*/ window.location.reload(true)}
+	if ( this.click === true && this.windowReload === true) { window.location.reload(true)}
   },
 
   /**

@@ -17,14 +17,15 @@ var uriFile = localStorage.getItem(appFileUri);
 
 ## Usage
 
-```js
-const SolidFile = require('solid-file-client')
-const Widget = require("./build/widget.js")
 
-```html
-  <script src="https://cdn.jsdelivr.net/npm/solid-file-client/dist/browser/solid-file-client.bundle.js"></script>
-  <script type="text/javascript" src="../build/widget.js"></script>
-  <script>
+```javascript
+const SolidFile = require('solid-file-client')
+const Widget = require("solid-file-widget")
+```
+```HTML
+<script src="https://cdn.jsdelivr.net/npm/solid-file-client/dist/browser/solid-file-client.bundle.js"></script>
+<script type="text/javascript" src="../build/widget.js"></script>
+<script>
 const solidFile = SolidFileClient;
 
 // ...
@@ -56,11 +57,6 @@ The widget has some configuration options to customize the behavior:
 | `solidAppName` | app name registered in Solid pod TypeIndex | String | "" |
 | `appFolder` | app root folder registered in Solid pod TypeIndex | String | from TypeIndex or '/public' |
 | `appFile` | app file registered in Solid pod TypeIndex | String | from TypeIndex |
-
-Example:
-
-```js
-const widget = new Widget(solidFile)
 
 ## Available Functions
 

@@ -1,6 +1,6 @@
 {
     "name": "rs-widget",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "description": "Solid connect widget using solid-file-client.js",
     "main": [
         "./build/widget.js"
