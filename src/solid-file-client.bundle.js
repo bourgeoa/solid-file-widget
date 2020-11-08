@@ -1,0 +1,1 @@
+../node_modules/solid-file-client/dist/umd/solid-file-client.bundle.js

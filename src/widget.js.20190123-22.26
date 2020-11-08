@@ -1,11 +1,9 @@
 /**
- * Solid podStorage connect widget (https://github.com/bourgeoa/solid-file-widget)
+ * Solid podStorage connect widget
  * inspired from RemoteStorage Widget (https://github.com/remotestorage/remotestorage-widget)
- *
- * @Return cookies in localStorage as URI
- * - appRootUri							  - https://<podName>/<appFolder> (default <podName> taken from webId)
- * - appFileUri							  - https://<podName>/<appFile>
- *										    
+ * 
+ * podStorage							   - session cookie contains : https://<podName> (default taken from webId)
+ * 
  * @constructor
  *
  * @param {object}  remoteStorage          - Solid podStorage instance
@@ -18,33 +16,26 @@
  *                                           but show sign-in screen directly instead
  *                                           (default: false)
  * @param {boolean} options.logging        - Enable logging (default: false)
- * @param 'boolean} options.windowReload   - Reload web app on disconnect (default: true)
- * @param {string}  options.appFolder	   - Root folder of the app (default: '/public')
- * @param {string}  options.appFile		   - appFile of the app (default: "")
- * @param {string}  options.solidAppName   - solidAppName shall find 'appFolder' through podStorage.card (default: "")
+ * @param 'boolean} options.windowReload   - reload web app on disconnect (default: true)
  */
-//const auth = require('solid-auth-client')
-
-let Widget = function(auth, remoteStorage, options={}) {
-//	this.auth = remoteStorage //require('solid-auth-client') //remoteStorage
-  this._auth = auth
-  this.rs = new SolidFileClient(this._auth) //remoteStorage;
+let Widget = function(remoteStorage, options={}) {
+  this.appFolder = "/public/tiddlers";
+  this.rs = remoteStorage;
+  this.userAddress ="";  
   this.click = false; // true if click on button disconnect
 
   this.leaveOpen      = options.leaveOpen ? options.leaveOpen : false;
   this.autoCloseAfter = options.autoCloseAfter ? options.autoCloseAfter : 1500;
   this.skipInitial    = options.skipInitial ? options.skipInitial : false;
   this.logging        = options.logging ? options.logging : false;
-  this.windowReload	  = options.windowReload ? options.windowReload : true;
-  this.appFile		  = options.appFile ? options.appFile : "";
-  this.appFolder	  = options.appFolder ? options.appFolder : "/public";  // ajout / a la fin
-  this.solidAppName   = options.solidAppName ? options.solidAppName : "";
-  
+  this.windowReload	  = options.windowReload ? options.windowReload : true
+
   // true if we have remoteStorage connection's info
   this.active = false;
 
   // widget is minimized ?
   this.closed = false;
+
 };
 
 Widget.prototype = {
@@ -59,29 +50,42 @@ Widget.prototype = {
   eventHandler (event, msg) {
     this.log('EVENT: ', event);
 //console.log(event);
-    switch (event) {
+//alert("event : "+event);
+	switch (event) {
       case 'disconnected':
         this.active = false;
         this.setBackendClass(); // removes all backend CSS classes
         this.open();
         this.setInitialState();
+//alert("disconnected "+this.click+" "+this.windowReload+" "+this.state);
+//      	if ( this.click === true && this.windowReload === true) {alert("windowReload"); window.location.reload(true)}
         break;
       case 'connected':
         this.active = true;
-				this._auth.currentSession().then( session => {
+		this.rs.checkSession().then( session => {
 		  console.log("Logged in as "+session.webId+" "+this.userAddress);
-          this.rsConnectedUser.innerHTML = localStorage.getItem('appRootUri');
-          this.setBackendClass("remotestorage");
+          this.rsConnectedUser.innerHTML = localStorage.getItem('podStorage'); //this.userAddress;
+          this.setBackendClass("remotestorage");  //  this.rs.backend);
           this.rsConnectedLabel.textContent = "webId : "+session.webId.split("/")[2];
           this.setState('connected');
 		  }, err => {alert(err); this.click === false; this.setState('disconnected');
 		});
-      	if ( this.click === true && this.windowReload === true) {/*alert("connect windowReload");*/ window.location.reload(true)}
+//alert("connected "+this.click+" "+this.windowReload+" "+this.state);
+      	if ( this.click === true && this.windowReload === true) {alert("connected windowReload"); window.location.reload(true)}
         break;
       case 'error':
-        this.setBackendClass("remotestorage");
-    	this._auth.logout().then( res => console.log("logout"), err => console.log("logout "+err));
-        this.handleDiscoveryError(msg);
+        this.setBackendClass("remotestorage");  //  this.rs.backend);
+
+        if (msg.slice(0,3) === "404") {
+          this.handleDiscoveryError(msg.split("404"));
+        } else if (msg.name === 'SyncError') {
+          this.handleSyncError(msg);
+        } else if (msg.name === 'Unauthorized') {
+          this.handleUnauthorized(msg);
+        } else {
+          console.debug('Encountered unhandled error', msg);
+        }
+
         break;
     }
   },
@@ -171,15 +175,20 @@ Widget.prototype = {
    * @private
    */
   setupHandlers () {
-	this._auth.currentSession().then( session => {
-		if (localStorage.getItem('appRootUri') === null) {
+//alert("setup handlers : podStorage : "+localStorage.getItem('podStorage'));
+	this.rs.checkSession().then( session => {
+		if (localStorage.getItem('podStorage') === null) {
 			this.click = false;
 			this.eventHandler("disconnected");
-			this._auth.logout().then( res => console.log("logout"), err => console.log("logout "+err));
+			this.rs.logout().then( res => console.log("logout"), err => console.log("logout "+err));
 		}else{
-		this.eventHandler("connected");
+		this.eventHandler("connected"); //alert("connected"+" podStorage : "+localStorage.getItem('podStorage'));
 		}
-		}, err => this.eventHandler("disconnected")
+	}, err => {
+//alert("test");
+		this.eventHandler("disconnected");
+//alert("disconnected"+" podStorage : "+localStorage.getItem('podStorage'));
+		}
 	);
     this.setEventListeners();
     this.setClickHandlers();
@@ -217,74 +226,66 @@ Widget.prototype = {
       e.preventDefault();
       this.userAddress = document.querySelector('input[name=rs-user-address]').value;
 	  // test podStorage and set localstorage cookie
-//	  await this._auth.logout().then( res => alert("logout"), err => alert("logout "+err));
-	  this._auth.currentSession().then( session => {
-			this._auth.logout().then( res => console.log("logout"), err => console.log("logout "+err))
-	  })
-	  alert("alain "+this.userAddress)
-	  this._auth.popupLogin({ popupUri: 'https://solidcommunity.net/common/popup.html' })
-	  .then( session => { const webId = session.webId
-	  	alert(webId)
-			if ( this.userAddress != "") {
-	  			this.userAddress = this.userAddress.split("/",3).join('/');
-			}else {
-				this.userAddress = webId.split("/",3).join('/');
+alert('popup login');
+	  this.rs.popupLogin()
+		.then( webId => {
+		  if ( this.userAddress != "")
+			{this.rs.readFolder(this.userAddress)   //+"/public")
+				.then( folder => {
+					localStorage.setItem('podStorage', this.userAddress);
+					this.click = true;
+//					this.eventHandler("connected");
+				}, err => {
+//check					this.rs.logout().then( console.log("logout podStotage error "+err)); // , err => console.log(err));
+//					this.eventHandler("error","PodStorage error : "+err)})
+					this.logoutError("404"+"PodStorage error : "+err)
+				}) // , err => console.log(err));
+			}else{
+				this.userAddress = "https://"+webId.split("/")[2];
+				localStorage.setItem('podStorage', this.userAddress);
+				this.click = true;
+//				this.eventHandler("connected");
 			}
-			if (this.appFolder.charAt(0) !== '/') {this.appFolder = "/"+this.appFolder}
-			this.appRootUri = this.userAddress+this.appFolder;
-			if (this.appFile.charAt(0) !== '/') {this.appFile = "/"+this.appFile}
-			this.appFileUri = this.userAddress+this.appFile;
-  			if ( this.solidAppName !== "" ) {this.findSolidAppFolder(this.solidAppName);}
-			this.checkAppFolder();
-		}, err => {
-			this.eventHandler("error", err+" webid")
-		})
-
-      })
+			this.checkAppFolder(localStorage.getItem('podStorage')).then();
+		  }, err => {alert("popup login : "+err); this.eventHandler("disconnected")}
+    	)
+			this.eventHandler("connected");
+//    	.then( folder => {alert("test check"); this.checkAppFolder(localStorage.getItem('podStorage'))})
+    })
   },
-  /* async function login(){
-alert("blabla");
-    const session = await this.auth.currentSession()
-	if( !session ) return await this.rs.popupLogin()
-}, */
 
-
-  checkAppFolder() {
-  	  this.rs.readFolder(this.appRootUri).then( folder => {
-						this.click = true;
-						localStorage.setItem('appRootUri', this.appRootUri);
-						if (this.appFile !== "/") { localStorage.setItem('appFileUri', this.appFileUri);}
-						this.eventHandler("connected")
-  		}, err => { alert(err.status)
-			if ( this.userAddress.split("/",2).join('/') !== "https:/") {
-				this.eventHandler("error", "404 (not an URL) "+this.userAddress)
-  			}else if (err.status === 404) { //slice(0,3) == "404") {
-  				let response = window.confirm("Error : "+err+"\n\nDo you allow creation of \n  "+this.appFolder+"\n  (need r/w access) ?");
-				if(response)
-				{
-					this.rs.createFolder(this.appRootUri).then( res => {
-						alert(this.appRootUri+"\n\nwas created");
-						this.click = true;
-						localStorage.setItem('appRootUri', this.appRootUri);
-						if (this.appFile !== "/") { localStorage.setItem('appFileUri', this.appFileUri);}
-						this.eventHandler("connected")
-					}, err => { alert("not created "+err);
-						this.eventHandler("error", err)
+  checkAppFolder(appRoot) { 
+	alert("test check "+appRoot+this.appFolder);
+  	this.rs.readFolder(appRoot+this.appFolder).then( folder => {
+  		alert(this.appFolder+" exists");
+  		}, err => {
+  			if (err.slice(0,3) == "404") {
+  				alert("Error : "+err+"\n !! create "+this.appFolder+"with r/w access !!")
+  				let response = window.confirm("Error : "+err+"\n Do you allow creation of \n"+this.appFolder+"(need r/w access) ?");
+					if(response)
+					{
+					this.rs.createFolder(appRoot+"/"+this.appFolder).then( res => {
+					alert(this.appFolder+" created")
+					}, err => {
+					this.logoutError("404"+"AppFolder error : create "+this.appFolder) // , err => console.log(err));
 					})
-				}else{
-					alert("You choosed not to create "+this.appFolder)
-					this.eventHandler("error", "404 (not found)\n"+this.appFolder+"\n (not created)");
-				}
-  			}else{
-				this.eventHandler("error", err)
-	    	}
-		})
-  },
-
-  findSolidAppFolder(appName) {
-//  	to be developped : find/create entry in type index including appFile/appFolder
+					}
+					else
+					{
+					this.logoutError("404"+"AppFolder error : create "+this.appFolder) // , err => console.log(err));
+					}
+  			}
+	    	else if (err.slice(0,3) == "401") {alert("Error : "+err+"\n  'webId' cannot access to '"+this.appFolder+"'")}
+	    	else alert("Error : "+err)
+	    })
   },
   
+  logoutError (msg) {
+ 	this.rs.logout().then( console.log("logout "+msg)); // , err => console.log(err));
+	this.eventHandler("error",msg)
+  },	
+
+
   setClickHandlers () {
     // Initial button
     this.rsInitial.addEventListener('click', () => this.setState('sign-in') );
@@ -303,22 +304,21 @@ alert("blabla");
   },
 
   /**
-   * Reset the widgets after disconnect.
+   * Reset the widget after disconnect.
    */
   disconnect() {
   	this.click = true;
 	this.userAddress ="";
-	localStorage.removeItem('appRootUri');
-	localStorage.removeItem('appFileUri');
-	this._auth.logout().then( res => console.log("logout"), err => console.log("logout "+err));
-//	this._auth.logout().then( console.log("logout disconnect"))
+	localStorage.removeItem('podStorage');
+	this.rs.logout().then( res => console.log("logout"), err => console.log("logout "+err));
     this.setInitialState();
 
     let msgContainer = document.querySelector('.rs-sign-in-error');
     msgContainer.innerHTML = "";
   	msgContainer.classList.remove('rs-visible');
     msgContainer.classList.add('rs-hidden');
-	if ( this.click === true && this.windowReload === true) {/*alert("disconnect windowReload");*/ window.location.reload(true)}
+//alert("disconnected "+this.click+" "+this.windowReload+" "+this.state);
+	if ( this.click === true && this.windowReload === true) {alert("disconnect windowReload"); window.location.reload(true)}
   },
 
   /**
@@ -408,42 +408,16 @@ alert("blabla");
   },
 
   handleUnauthorized (error) {
+    if (error.code && error.code === 'access_denied') {
+      this.rs.logout().then( res => console.log("logout"), err => console.log("logout "+err));
+    } else {
       this.open();
-      this.showErrorBox(error + " ");
+      this.showErrorBox(error.message + " ");
       this.rsErrorBox.appendChild(this.rsErrorReconnectLink);
       this.rsErrorReconnectLink.classList.remove('rs-hidden');
-  },
-  
-checkSession () {
-  this._auth.currentSession().then(sess => {
-  if (sess) return sess
-  else {} //throw new Error("No current session")
-  })
-},
-
-/*  async popupLogin() {
-    let session = await this.auth.currentSession();
-    if (!session) {
-        let popupUri = 'https:/solidcommunity.net/common/popup.html';
-        session = await this.auth.popupLogin({ popupUri });
     }
-    return(session.webId);
   },
 
-  async login(credentials) {
-    var session
-    try {
-      session = await this.auth.currentSession();
-      if(session) return session;
-    }
-    catch(err) {
-        session = await this.auth.login(credentials);
-        return session;
-    }
-        session = await this.auth.login(credentials);
-        return session;
-  },
-*/
 };
 
 module.exports = Widget;

@@ -15,14 +15,17 @@
 <body>
 <!--  <script src="https://cdn.jsdelivr.net/npm/solid-file-client@0.4.8/dist/browser/solid-file-client.bundle.js"></script> -->
 <!--  <script src="https://cdn.jsdelivr.net/npm/solid-file-client/dist/browser/solid-file-client.bundle.js"></script> -->
-  <script type="text/javascript" src="../node_modules/solid-file-client/dist/browser/solid-file-client.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/solid-auth-client@2.5.2/dist-lib/solid-auth-client.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/solid-file-client@1.1.0/dist/window/solid-file-client.bundle.js"></script>
+<!-- <script type="text/javascript" src="../node_modules/solid-file-client/dist/browser/solid-file-client.bundle.js"></script> -->
   <script type="text/javascript" src="../build/widget.js"></script>
   <script>
 
- 	const fileClient = SolidFileClient;
+  const auth = solid.auth
+  const fileClient = new SolidFileClient(auth);
 	let folder = "/public/foldername"
 
-    var widget = new Widget(fileClient, {
+    var widget = new Widget(auth, fileClient, {
       //leaveOpen: true,
       //autoCloseAfter: 2000,
       // skipInitial: true,

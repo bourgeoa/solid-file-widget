@@ -2,18 +2,23 @@
 var webpack = require('webpack');
 var isProd = (process.env.NODE_ENV === 'production');
 var path = require('path');
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin')
 
 // minimize only in production
-var plugins = isProd ? [new webpack.optimize.UglifyJsPlugin({minimize: true})] : [];
+var plugins = isProd ? [new UglifyJSPlugin({ sourceMap: true })] : [];
 
 module.exports = {
-  entry: ["./src/widget.js"],
+  entry:  {
+    polyfill: "babel-polyfill",
+    app: "./src/widget.js"
+  },
   output: {
     path: path.resolve(__dirname, 'build'),
     filename: 'widget.js',
     library: 'Widget',
     libraryTarget: 'umd'
   },
+  mode: isProd ? 'production' : 'development',
   devtool: isProd ? '#source-map' : '#eval-source-map',
   externals: {
       // require("solid-file-client") is external and available
@@ -28,8 +33,17 @@ module.exports = {
       }
   },
   module: {
-    loaders: [
-      { test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader' }, // 'babel?presets=es2015' },
+    rules: [
+      { 
+        test: /\.js$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env']
+          }
+        }
+      }
     ]
   },
   plugins: plugins
