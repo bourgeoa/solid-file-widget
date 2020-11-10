@@ -1,7 +1,7 @@
 <!doctype html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" charset="utf-8">
-  <title>RS Widget Test</title>
+  <title>SolidAuth Widget Test</title>
   <style>
     * {
       margin: 0;
@@ -13,29 +13,29 @@
   </style>
 </head>
 <body>
-<!--  <script src="https://cdn.jsdelivr.net/npm/solid-file-client@0.4.8/dist/browser/solid-file-client.bundle.js"></script> -->
-<!--  <script src="https://cdn.jsdelivr.net/npm/solid-file-client/dist/browser/solid-file-client.bundle.js"></script> -->
   <script src="https://cdn.jsdelivr.net/npm/solid-auth-client@2.5.2/dist-lib/solid-auth-client.bundle.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/solid-file-client@1.1.0/dist/window/solid-file-client.bundle.js"></script>
-<!-- <script type="text/javascript" src="../node_modules/solid-file-client/dist/browser/solid-file-client.bundle.js"></script> -->
+<!--  <script src="https://cdn.jsdelivr.net/npm/solid-file-client@1.1.0/dist/window/solid-file-client.bundle.js"></script> -->
   <script type="text/javascript" src="../build/widget.js"></script>
   <script>
 
   const auth = solid.auth
-  const fileClient = new SolidFileClient(auth);
+  // const fc = new SolidFileClient(auth);
 	let folder = "/public/foldername"
 
-    var widget = new Widget(auth, fileClient, {
+    var widget = new Widget(auth, { //fc, {
       //leaveOpen: true,
       //autoCloseAfter: 2000,
       // skipInitial: true,
       //windowReload: false,
-      appFolder: folder,
-      //appFile : "/public/filename.ttl"
-      solidAppName : "appName",
+      //appFolder: folder,
+      //solidAppName: "appName",
+      appFolder : "/public/tiddlers",
+      solidAppName : "tiddlywiki",
       logging: true
     });
     widget.attach();
+    /*fc.createFolder(localStorage.getItem('appRootUriToCreate')).then(res => 
+    	{ alert('L42 created') }, err => { alert('L42 not created') }) */
 
     let style = document.createElement('style')
     style.innerHTML = `#remotestorage-widget {

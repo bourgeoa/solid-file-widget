@@ -8,7 +8,7 @@
  *										    
  * @constructor
  *
- * @param {object}  remoteStorage          - Solid podStorage instance
+ * @param {object}  auth					         - solid-authorization-client instance
  * @param {object}  options                - Widget options
  * @param {boolean} options.leaveOpen      - Do not minimize widget when user clicks
  *                                           outside of it (default: false)
@@ -19,16 +19,14 @@
  *                                           (default: false)
  * @param {boolean} options.logging        - Enable logging (default: false)
  * @param 'boolean} options.windowReload   - Reload web app on disconnect (default: true)
- * @param {string}  options.appFolder	   - Root folder of the app (default: '/public')
- * @param {string}  options.appFile		   - appFile of the app (default: "")
+ * @param {string}  options.appFolder	     - Root folder of the app (default: '/public')
+ * @param {string}  options.appFile		     - appFile of the app (default: "")
  * @param {string}  options.solidAppName   - solidAppName shall find 'appFolder' through podStorage.card (default: "")
+ * @param {string}  options.popupUri       - popupUri default to https://solidcommunity.net/common/popup.html
  */
-//const auth = require('solid-auth-client')
 
-let Widget = function(auth, remoteStorage, options={}) {
-//	this.auth = remoteStorage //require('solid-auth-client') //remoteStorage
+let Widget = function(auth, options={}) {
   this._auth = auth
-  this.rs = new SolidFileClient(this._auth) //remoteStorage;
   this.click = false; // true if click on button disconnect
 
   this.leaveOpen      = options.leaveOpen ? options.leaveOpen : false;
@@ -36,9 +34,11 @@ let Widget = function(auth, remoteStorage, options={}) {
   this.skipInitial    = options.skipInitial ? options.skipInitial : false;
   this.logging        = options.logging ? options.logging : false;
   this.windowReload	  = options.windowReload ? options.windowReload : true;
-  this.appFile		  = options.appFile ? options.appFile : "";
-  this.appFolder	  = options.appFolder ? options.appFolder : "/public";  // ajout / a la fin
+  this.appFile		    = options.appFile ? options.appFile : "";
+  this.appFolder	    = options.appFolder ? options.appFolder : "/public";  // with or without / at end
   this.solidAppName   = options.solidAppName ? options.solidAppName : "";
+  this.popupUri       = options.popupUri ? options.popupUri : 'https://solidcommunity.net/common/popup.html'
+
   
   // true if we have remoteStorage connection's info
   this.active = false;
@@ -58,7 +58,6 @@ Widget.prototype = {
   // handle events !
   eventHandler (event, msg) {
     this.log('EVENT: ', event);
-//console.log(event);
     switch (event) {
       case 'disconnected':
         this.active = false;
@@ -69,13 +68,14 @@ Widget.prototype = {
       case 'connected':
         this.active = true;
 				this._auth.currentSession().then( session => {
-		  console.log("Logged in as "+session.webId+" "+this.userAddress);
-          this.rsConnectedUser.innerHTML = localStorage.getItem('appRootUri');
-          this.setBackendClass("remotestorage");
-          this.rsConnectedLabel.textContent = "webId : "+session.webId.split("/")[2];
-          this.setState('connected');
-		  }, err => {alert(err); this.click === false; this.setState('disconnected');
-		});
+          if (session) {					
+            console.log("Logged in as "+session.webId+" "+this.userAddress);
+            this.rsConnectedUser.innerHTML = localStorage.getItem('appRootUri');
+            this.setBackendClass("remotestorage");
+            this.rsConnectedLabel.textContent = "webId : "+session.webId.split("/")[2];
+            this.setState('connected');
+          } else { this.click === false; this.setState('disconnected') }
+		    });
       	if ( this.click === true && this.windowReload === true) {/*alert("connect windowReload");*/ window.location.reload(true)}
         break;
       case 'error':
@@ -130,10 +130,10 @@ Widget.prototype = {
   createHtmlTemplate () {
     const element = document.createElement('div');
     const style = document.createElement('style');
-    style.innerHTML = require('raw!./assets/styles.css');
+    style.innerHTML = require('raw-loader!./assets/styles.css');
 
     element.id = "remotestorage-widget";
-    element.innerHTML = require('html!./assets/widget.html');
+    element.innerHTML = require('html-loader!./assets/widget.html');
     element.appendChild(style);
 
     return element;
@@ -171,18 +171,19 @@ Widget.prototype = {
    * @private
    */
   setupHandlers () {
-	this._auth.currentSession().then( session => {
-		if (localStorage.getItem('appRootUri') === null) {
-			this.click = false;
-			this.eventHandler("disconnected");
-			this._auth.logout().then( res => console.log("logout"), err => console.log("logout "+err));
-		}else{
-		this.eventHandler("connected");
-		}
-		}, err => this.eventHandler("disconnected")
-	);
-    this.setEventListeners();
-    this.setClickHandlers();
+	this._auth.currentSession().then( session => { 
+		if(session) {
+      if (localStorage.getItem('appRootUri') === null) {
+        this.click = false;
+        this.eventHandler("disconnected")
+        this._auth.logout().then( res => console.log("logout"), err => console.log("logout "+err));
+      }else{
+      this.eventHandler("connected")
+      }
+		} else { this.eventHandler("disconnected") }
+	})
+    this.setEventListeners()
+    this.setClickHandlers()
   },
 
   /**
@@ -213,71 +214,89 @@ Widget.prototype = {
 
   setEventListeners () {
     // Sign-in form
-    this.rsSignInForm.addEventListener('submit', (e) => {
+    this.rsSignInForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       this.userAddress = document.querySelector('input[name=rs-user-address]').value;
-	  // test podStorage and set localstorage cookie
-//	  await this._auth.logout().then( res => alert("logout"), err => alert("logout "+err));
-	  this._auth.currentSession().then( session => {
-			this._auth.logout().then( res => console.log("logout"), err => console.log("logout "+err))
-	  })
-	  alert("alain "+this.userAddress)
-	  this._auth.popupLogin({ popupUri: 'https://solidcommunity.net/common/popup.html' })
-	  .then( session => { const webId = session.webId
-	  	alert(webId)
-			if ( this.userAddress != "") {
-	  			this.userAddress = this.userAddress.split("/",3).join('/');
-			}else {
-				this.userAddress = webId.split("/",3).join('/');
-			}
-			if (this.appFolder.charAt(0) !== '/') {this.appFolder = "/"+this.appFolder}
-			this.appRootUri = this.userAddress+this.appFolder;
-			if (this.appFile.charAt(0) !== '/') {this.appFile = "/"+this.appFile}
-			this.appFileUri = this.userAddress+this.appFile;
-  			if ( this.solidAppName !== "" ) {this.findSolidAppFolder(this.solidAppName);}
-			this.checkAppFolder();
-		}, err => {
-			this.eventHandler("error", err+" webid")
-		})
-
-      })
+	    // test podStorage and set localstorage cookie
+      await this._auth.logout()
+      try {
+        const session = await this.popupLogin()
+        const webId = session.webId
+        if ( this.userAddress != "") {
+          this.userAddress = this.userAddress.split("/",3).join('/')
+        } else {
+          this.userAddress = webId.split("/",3).join('/')
+        }
+        if (this.appFolder.charAt(0) !== '/') {this.appFolder = "/" + this.appFolder }
+        this.appRootUri = this.userAddress + this.appFolder
+        if (this.appFile.charAt(0) !== '/') { this.appFile = "/"+this.appFile }
+        this.appFileUri = this.userAddress + this.appFile
+        if ( this.solidAppName !== "" ) { this.findSolidAppFolder(this.solidAppName) }
+        this.checkAppFolder() 
+      } catch(err) {
+        this.eventHandler("error", err + " webid")
+      }
+    })
   },
-  /* async function login(){
-alert("blabla");
-    const session = await this.auth.currentSession()
-	if( !session ) return await this.rs.popupLogin()
-}, */
+  
+  async popupLogin () {
+  	try {
+    const session = await this._auth.currentSession()
+    if( !session ) return await this._auth.popupLogin({ popupUri: this.popupUri })
+      return session
+  	} catch(err) { alert(err) }
+  },
 
 
   checkAppFolder() {
-  	  this.rs.readFolder(this.appRootUri).then( folder => {
-						this.click = true;
-						localStorage.setItem('appRootUri', this.appRootUri);
-						if (this.appFile !== "/") { localStorage.setItem('appFileUri', this.appFileUri);}
-						this.eventHandler("connected")
-  		}, err => { alert(err.status)
-			if ( this.userAddress.split("/",2).join('/') !== "https:/") {
-				this.eventHandler("error", "404 (not an URL) "+this.userAddress)
-  			}else if (err.status === 404) { //slice(0,3) == "404") {
-  				let response = window.confirm("Error : "+err+"\n\nDo you allow creation of \n  "+this.appFolder+"\n  (need r/w access) ?");
-				if(response)
-				{
-					this.rs.createFolder(this.appRootUri).then( res => {
-						alert(this.appRootUri+"\n\nwas created");
-						this.click = true;
-						localStorage.setItem('appRootUri', this.appRootUri);
-						if (this.appFile !== "/") { localStorage.setItem('appFileUri', this.appFileUri);}
-						this.eventHandler("connected")
-					}, err => { alert("not created "+err);
-						this.eventHandler("error", err)
-					})
-				}else{
-					alert("You choosed not to create "+this.appFolder)
-					this.eventHandler("error", "404 (not found)\n"+this.appFolder+"\n (not created)");
-				}
-  			}else{
-				this.eventHandler("error", err)
-	    	}
+    this._auth.fetch(this.appRootUri, { method: 'HEAD' }).then(res => {
+    	if (res.status === 200) {  
+        this.click = true
+        localStorage.setItem('appRootUri', this.appRootUri)
+        if (this.appFile !== "/") { localStorage.setItem('appFileUri', this.appFileUri) }
+        this.eventHandler("connected")
+		    if ( this.userAddress.split("/",2).join('/') !== "https:/") {
+		      this.eventHandler("error", "404 (not an URL) "+this.userAddress)
+		    }
+	    } else if (res.status === 404) {
+	      let response = window.confirm("Error : "+res.statusText+"\n\nDo you allow creation of \n  "+this.appFolder+"\n  (need r/w access) ?");
+	      if(response) {
+	      	const slug = this.appRootUri.replace(/\/$/, '').replace(/.*\//, '')
+	      	const folder = this.appRootUri.substring(0, this.appRootUri.lastIndexOf(slug))
+	      	let options = {
+	      		method: 'POST',
+	      		headers: {
+	      			link: '<http://www.w3.org/ns/ldp#BasicContainer>; rel="type"',
+		      		slug: slug,
+		      		'Content-Type': 'text/turtle'
+	      		},
+	      		body: ''
+	      	}
+	        this._auth.fetch(folder, options).then( res => {
+	        	if (res.ok) {
+	          alert(this.appRootUri+"\n\nwas created")
+	          this.click = true
+	          localStorage.setItem('appRootUri', this.appRootUri)
+	          if (this.appFile !== "/") { localStorage.setItem('appFileUri', this.appFileUri) }
+	          this.eventHandler("connected")
+	        	} else {
+				    	console.log('Authorization error '+res.statusText)
+				      this.eventHandler("error", 'Authorization error '+res.statusText)
+	        	}
+	        }, err => {
+	          this.eventHandler("error", err)
+	        })
+	      } else {
+	        alert("You choosed not to create "+this.appFolder)
+	        this.eventHandler("error", "404 (not found)\n"+this.appFolder+"\n (not created)")
+	      }
+	    } else {
+	    	console.log('Authorization error ' + res.statusText)
+	      this.eventHandler("error", 'Authorization error '+ res.statusText)
+	    }
+	  }, err => {
+	    	console.log('Authorization error '+err)
+	      this.eventHandler("error", 'Authorization '+err)
 		})
   },
 
@@ -306,19 +325,19 @@ alert("blabla");
    * Reset the widgets after disconnect.
    */
   disconnect() {
-  	this.click = true;
-	this.userAddress ="";
-	localStorage.removeItem('appRootUri');
-	localStorage.removeItem('appFileUri');
-	this._auth.logout().then( res => console.log("logout"), err => console.log("logout "+err));
-//	this._auth.logout().then( console.log("logout disconnect"))
-    this.setInitialState();
+  	this.click = true
+    this.userAddress =""
+    localStorage.removeItem('appRootUri')
+    localStorage.removeItem('appFileUri')
+    localStorage.removeItem('appRootUriTo Create')
+    this._auth.logout().then( res => console.log("logout"), err => console.log("logout "+err))
+    this.setInitialState()
 
-    let msgContainer = document.querySelector('.rs-sign-in-error');
-    msgContainer.innerHTML = "";
-  	msgContainer.classList.remove('rs-visible');
-    msgContainer.classList.add('rs-hidden');
-	if ( this.click === true && this.windowReload === true) {/*alert("disconnect windowReload");*/ window.location.reload(true)}
+    let msgContainer = document.querySelector('.rs-sign-in-error')
+    msgContainer.innerHTML = ""
+  	msgContainer.classList.remove('rs-visible')
+    msgContainer.classList.add('rs-hidden')
+	if (this.click === true && this.windowReload === true) {/*alert("disconnect windowReload");*/ window.location.reload(true)}
   },
 
   /**
@@ -331,9 +350,9 @@ alert("blabla");
       this.open();
     } else {
       if (this.state === 'initial') {
-        this.showChooseOrSignIn();
+        this.showChooseOrSignIn()
       } else {
-        this.close();
+        this.close()
       }
     }
   },
@@ -412,38 +431,7 @@ alert("blabla");
       this.showErrorBox(error + " ");
       this.rsErrorBox.appendChild(this.rsErrorReconnectLink);
       this.rsErrorReconnectLink.classList.remove('rs-hidden');
-  },
-  
-checkSession () {
-  this._auth.currentSession().then(sess => {
-  if (sess) return sess
-  else {} //throw new Error("No current session")
-  })
-},
+  }, 
+}
 
-/*  async popupLogin() {
-    let session = await this.auth.currentSession();
-    if (!session) {
-        let popupUri = 'https:/solidcommunity.net/common/popup.html';
-        session = await this.auth.popupLogin({ popupUri });
-    }
-    return(session.webId);
-  },
-
-  async login(credentials) {
-    var session
-    try {
-      session = await this.auth.currentSession();
-      if(session) return session;
-    }
-    catch(err) {
-        session = await this.auth.login(credentials);
-        return session;
-    }
-        session = await this.auth.login(credentials);
-        return session;
-  },
-*/
-};
-
-module.exports = Widget;
+module.exports = Widget

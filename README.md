@@ -1,24 +1,43 @@
-# remotestorage-widget
+# solid-file-widget
 
-[![npm](https://img.shields.io/npm/v/remotestorage-widget.svg)](https://www.npmjs.com/package/remotestorage-widget)
-[![devDependency Status](http://img.shields.io/david/dev/remotestorage/remotestorage-widget.svg?style=flat)](https://david-dm.org/remotestorage/remotestorage-widget#info=devDependencies)
+<a href="http://badge.fury.io/js/solid-file-widget">![npm](https://badge.fury.io/js/solid-file-widget.svg)</a>
 
-A ready-to-use connect/sync widget, as add-on library for
-[remoteStorage.js](https://github.com/remotestorage/remotestorage.js/).
+A ready-to-use connect/register widget for Solid webapp, as add-on library for
+[node-solid-server](https://github.com/solid/node-solid-server).
+
+-- registering to be done, but all parameters are fonctional --
+
+## Returns cookies
+
+If 'connected to the Solid pod' and after 'checking/creating appRootUri for appRoot'
+(do not check/create appFileUri) returns localStorage cookies.
+
+var uriRoot = localStorage.getItem(appRootUri);
+var uriFile = localStorage.getItem(appFileUri);
 
 ## Usage
 
-```js
-import RemoteStorage from 'remotestoragejs';
-import Widget from 'remotestorage-widget';
+
+```javascript
+const auth = require('solid-auth-client')
+const Widget = require("solid-file-widget")
+```
+```HTML
+<script src="https://cdn.jsdelivr.net/npm/solid-auth-client/dist-lib/solid-auth-client.bundle.js"></script>
+<script type="text/javascript" src="../build/widget.js"></script>
+<script>
+const auth = solid.auth
 
 // ...
 
-const remoteStorage = new RemoteStorage(/* options */);
+var uriRoot = localStorage.getItem(appRoot);
+var uriFile = localStorage.getItem(appFile);
 
-remoteStorage.access.claim('bookmarks', 'rw');
+const widget = new Widget(solidFile, {
+	solidAppName : "appname",
+	appFolder : "/public/foldername"
+	});
 
-const widget = new Widget(remoteStorage);
 widget.attach();
 
 // ...
@@ -34,12 +53,11 @@ The widget has some configuration options to customize the behavior:
 | `autoCloseAfter` | Timeout after which the widget closes automatically (in milliseconds). The widget only closes when a storage is connected. | Number | 1500 |
 | `skipInitial` | Don't show the initial connect hint, but show sign-in screen directly instead | Boolean | false |
 | `logging` | Enable logging for debugging purposes | Boolean | false |
-
-Example:
-
-```js
-const widget = new Widget(remoteStorage, { autoCloseAfter: 2000 });
-```
+| `windowReload` | Browser reload on connect/disconnect | Boolean | true |
+| `solidAppName` | app name registered in Solid pod TypeIndex | String | "" |
+| `appFolder` | app root folder registered in Solid pod TypeIndex | String | from TypeIndex or '/public' |
+| `appFile` | app file registered in Solid pod TypeIndex | String | from TypeIndex |
+| `popupUri` | solidAuth popup default to : "https://solidcommunity.net/common/popup.html" | string |
 
 ## Available Functions
 
@@ -53,7 +71,7 @@ fine-tuning the experience.
 
 `close()` - Close/minimize the widget to only show the icon.
 
-`open()` - Open the widget when it's minimized.
+`open()` - Open the widget when it is minimized.
 
 `toggle()` - Switch between open and closed state.
 
@@ -68,3 +86,10 @@ Build, run and watch demo/test app:
     npm start
 
 The demo app will then be served at http://localhost:8008
+
+## Acknowledgements
+
+Many thanks for inspiration from https://github.com/remotestorage/remotestorage-widget
+and from https://github.com/jeff-zucker/solid-file-client
+
+**copyright (c) 2019 Alain Bourgeois** may be freely used with MIT license

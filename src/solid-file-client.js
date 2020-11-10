@@ -1,1 +1,0 @@
-../node_modules/solid-file-client/umd/solid-file-client.js
