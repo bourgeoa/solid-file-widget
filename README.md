@@ -2,6 +2,10 @@
 
 <a href="http://badge.fury.io/js/solid-file-widget">![npm](https://badge.fury.io/js/solid-file-widget.svg)</a>
 
+--- NEW as from v1.0.0 solid-file-client is not used anymore, it is replaced by solid-auth-client ---
+
+--- NEW an option for choosing a popup.html file has been added, it defaults to https://solidcommunity.net/common/popup.html
+
 A ready-to-use connect/register widget for Solid webapp, as add-on library for
 [node-solid-server](https://github.com/solid/node-solid-server).
 
